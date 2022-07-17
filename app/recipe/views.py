@@ -32,3 +32,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             https://www.django-rest-framework.org/api-guide/
             generic-views/#get_serializer_classself
         """
+
+    def perform_create(self, serializer):
+        """ Recepe os dados da Requisição e Cria a Receita."""
+        serializer.save(user=self.request.user)
