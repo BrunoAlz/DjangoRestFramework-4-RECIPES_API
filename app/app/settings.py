@@ -109,3 +109,11 @@ AUTH_USER_MODEL = 'core.User'
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+# https://drf-spectacular.readthedocs.io/en/latest/
+SPECTACULAR_SETTINGS = {
+    'TITLE': '3-API-DRF-RECIPES',
+    'DESCRIPTION': 'Recipes API, Using DRF',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
