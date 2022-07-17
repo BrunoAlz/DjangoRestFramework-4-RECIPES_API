@@ -19,6 +19,25 @@ class UserSerializer(serializers.ModelSerializer):
         """Cria e retorna o novo usuário com a senha encriptada"""
         return get_user_model().objects.create_user(**validated_data)
 
+    def update(self, instance, validated_data):
+        """Faz o updade e retorna o usuário"""
+
+        """
+        1 - Pega a senha do usuário que está vindo na requisição
+        dentro do serializador, e exclui essa senha, assim a senha
+        não será obrigatória no update, ou seja o usuário pode mudar
+        só o nome.
+        """
+        password = validated_data.pop('password', None)
+        user = super().update(instance, validated_data)
+
+        # 2 - Se o mandar a senha na requisição, faz o updade.
+        if password:
+            user.set_password(password)
+            user.save()
+
+        return user
+
 
 class AuthTokenSerializer(serializers.Serializer):
     """Serializer for the user auth token."""
