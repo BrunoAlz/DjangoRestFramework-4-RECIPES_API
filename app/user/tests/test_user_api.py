@@ -12,6 +12,7 @@ from rest_framework import status
 # Constante com o endpoint que será testado
 CREATE_USER_URL = reverse('user:create')
 TOKEN_URL = reverse('user:token')
+ME_URL = reverse('user:me')
 
 
 def create_user(**params):
@@ -137,3 +138,67 @@ class PublicUserApiTests(TestCase):
 
         self.assertNotIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_user_unauthorized(self):
+        """Verifica se o usuário não autenticado consegue acessar
+        o profile."""
+
+        # 1 - Manda uma requisição GET para url de Profile
+        res = self.client.get(ME_URL)
+        # 2 - Verifica o Status da requisição
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PrivateUserApiTests(TestCase):
+    """TESTES para a API de usuários autenticados."""
+
+    def setUp(self):
+        # 1 - Cria o usuário
+        self.user = create_user(
+            email='test@example.com',
+            password='testpass123',
+            name='Test Name',
+        )
+        # 2 - Instancia um APIClient
+        self.client = APIClient()
+        # 3 - Força uma atuenticação mantendo o usuário
+        # Autenticado para continuar os testes
+        self.client.force_authenticate(user=self.user)
+
+    def test_retrieve_profile_success(self):
+        """Verifica se o usuário Autenticado pode acessar seu Profile."""
+
+        # 1 - Manda uma requisição para a url de profile
+        res = self.client.get(ME_URL)
+        # 2 - Verifica o Status da requisição
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        # 3 - Verifica se os dados do Usuário authenticado voltaram
+        self.assertEqual(res.data, {
+            'name': self.user.name,
+            'email': self.user.email,
+        })
+
+    def test_post_me_not_allowed(self):
+        """Verifica se o Endpoin aceita requisições POST."""
+
+        # 1 - Manda uma requisição post para a Url
+        res = self.client.post(ME_URL, {})
+        # 2 - Verifica o status da Requisição
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_update_user_profile(self):
+        """Verifica se se o usuário autenticado consegue
+        alterar os próprios dados com patch."""
+
+        # 1 - Monta o payload com os dados
+        payload = {'name': 'Updated name', 'password': 'newpassword123'}
+        # 2 - Manda uma requisição patch para a Url
+        res = self.client.patch(ME_URL, payload)
+        # 3 - Atualiza o banco e Pega a Instancia do usuário atualizado
+        self.user.refresh_from_db()
+        # 4 - Verifica se o nome do user é igual o nome no payload
+        self.assertEqual(self.user.name, payload['name'])
+        # 5 - Verifica se a senha está correta
+        self.assertTrue(self.user.check_password(payload['password']))
+        # 6 - Verifica o status da Requisição
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
