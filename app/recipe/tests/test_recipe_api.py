@@ -9,13 +9,21 @@ from rest_framework.test import APIClient
 
 from core.models import Recipe
 
-from recipe.serializers import RecipeSerializer
+from recipe.serializers import (
+    RecipeSerializer,
+    RecipeDetailSerializer,
+)
 
 
 RECIPES_URL = reverse('recipe:recipe-list')
 
+# Função Helper para Acessar a URL de Detalhes
+def detail_url(recipe_id):
+    """Recebe o ID de uma receita e retorna a URL de Detalhes."""
+    return reverse('recipe:recipe-detail', args=[recipe_id])
 
-# Função helper para os teste das Receitas
+
+# Função helper para Criar Receitas
 def create_recipe(user, **params):
     """Cria e retorna uma receita para testes"""
 
@@ -95,7 +103,11 @@ class PrivateRecipeApiTests(TestCase):
             'other@example.com',
             'password123',
         )
-        # 2 - Cria duas receitas, cada uma por um usuário diferente.
+        """
+        2 - Cria duas receitas:
+            Uma por um usuário novo "other_user"
+            Outra pelo usuário autenticado
+        """
         create_recipe(user=other_user)
         create_recipe(user=self.user)
 
@@ -110,5 +122,19 @@ class PrivateRecipeApiTests(TestCase):
         serializer = RecipeSerializer(recipes, many=True)
         # 6 - Testa o Status da requisição
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+        # 7 - Verifica se os dados da Requisição são iguais do BD
+        self.assertEqual(res.data, serializer.data)
+
+    def test_get_recipe_detail(self):
+        """Verifica se Está recuperando os detalhes de uma receita."""
+
+        # 1 - Cria uma receita
+        recipe = create_recipe(user=self.user)
+        # 2 - Passa o ID da receita criada para a função helper
+        url = detail_url(recipe.id)
+        # 3 - Faz a requisição na URL de Details
+        res = self.client.get(url)
+        # 4 - Serializa os dados da Receita Criada
+        serializer = RecipeDetailSerializer(recipe)
         # 7 - Verifica se os dados da Requisição são iguais do BD
         self.assertEqual(res.data, serializer.data)
