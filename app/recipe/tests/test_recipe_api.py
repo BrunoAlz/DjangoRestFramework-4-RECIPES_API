@@ -17,6 +17,7 @@ from recipe.serializers import (
 
 RECIPES_URL = reverse('recipe:recipe-list')
 
+
 # Função Helper para Acessar a URL de Detalhes
 def detail_url(recipe_id):
     """Recebe o ID de uma receita e retorna a URL de Detalhes."""
