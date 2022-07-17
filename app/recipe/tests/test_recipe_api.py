@@ -139,3 +139,25 @@ class PrivateRecipeApiTests(TestCase):
         serializer = RecipeDetailSerializer(recipe)
         # 7 - Verifica se os dados da Requisição são iguais do BD
         self.assertEqual(res.data, serializer.data)
+
+    def test_create_recipe(self):
+        """Verificar a Criação de uma Receita direto via API."""
+
+        # 1 - Cria o Payload com os dados
+        payload = {
+            'title': 'Sample recipe',
+            'time_minutes': 30,
+            'price': Decimal('5.99'),
+        }
+        # 2 - Manda um POST para a url com os dados
+        res = self.client.post(RECIPES_URL, payload)
+        # 3 - Verifica o Status da Requisição
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        # 4 - Recupera no banco a Receita criada
+        recipe = Recipe.objects.get(id=res.data['id'])
+        # 5 - Percorre da receita no Payload
+        for k, v in payload.items():
+            # 6 - Verifica se os dados do Banco são iguais aos dados do Payload
+            self.assertEqual(getattr(recipe, k), v)
+        # 7 - Verifica se o usuário da Receita é igual ao usuário Autenticado
+        self.assertEqual(recipe.user, self.user)
