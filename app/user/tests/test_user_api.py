@@ -11,6 +11,8 @@ from rest_framework import status
 
 # Constante com o endpoint que será testado
 CREATE_USER_URL = reverse('user:create')
+TOKEN_URL = reverse('user:token')
+
 
 def create_user(**params):
     """Cria e retorna um novo usuário"""
@@ -57,7 +59,8 @@ class PublicUserApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_password_too_short_error(self):
-        """Verifica se algum erro é retornado no caso de a senha ser muito curta"""
+        """Verifica se algum erro é retornado no caso
+        de a senha ser muito curta"""
         payload = {
             'email': 'test@example.com',
             'password': 'pw',
@@ -66,9 +69,71 @@ class PublicUserApiTests(TestCase):
         res = self.client.post(CREATE_USER_URL, payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-        # Verifica se o usuário com a senha curta foi criado, o resultado deve ser False
+        # Verifica se o usuário com a senha curta foi criado,
+        # o resultado deve ser False
         user_exists = get_user_model().objects.filter(
             email=payload['email']
         ).exists()
         # Testa se o resultado é Falso
         self.assertFalse(user_exists)
+
+    def test_create_token_for_user(self):
+        """Verifica se foi gerado um token com sucesso
+        quando o usuário manda credenciais válidas"""
+        # 1 - Cria o usuário
+        user_details = {
+            'name': 'Test Name',
+            'email': 'test@example.com',
+            'password': 'test-user-password123',
+        }
+        create_user(**user_details)
+
+        # 2 - Recupera os dados do usuário criado e faz o payload
+        payload = {
+            'email': user_details['email'],
+            'password': user_details['password'],
+        }
+        # 3 - Faz a requisição post, para a Url de criação de Token
+        res = self.client.post(TOKEN_URL, payload)
+
+        # Verifica se a chave token está na resposta da requisição
+        self.assertIn('token', res.data)
+        # Verifica o Status HTTP da resposta
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_create_token_bad_credentials(self):
+        """Testa se o token foi criado no caso de o usuário
+        mandar credenciais inválidas."""
+
+        # 1 - Cria o usuário
+        create_user(email='test@example.com', password='goodpass')
+
+        """ 2 - Recupera os dados do usuário criado e faz o payload,
+        com as credenciais inválidas, neste caso a senha"""
+        payload = {'email': 'test@example.com', 'password': 'badpass'}
+
+        # 3 - Faz a requisição post, para a Url de criação de Token
+        res = self.client.post(TOKEN_URL, payload)
+
+        # Verifica se a chave token está na resposta da requisição
+        self.assertNotIn('token', res.data)
+        # Verifica o Status HTTP da resposta
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_token_email_not_found(self):
+        """Verifica se é retornado erro no caso de o usuário mandar
+        a requisição com um email que não existe"""
+        payload = {'email': 'test@example.com', 'password': 'pass123'}
+        res = self.client.post(TOKEN_URL, payload)
+
+        self.assertNotIn('token', res.data)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_token_blank_password(self):
+        """Verifica se é retornado erro no caso de o usuário
+        mandar a requisição sem a senha."""
+        payload = {'email': 'test@example.com', 'password': ''}
+        res = self.client.post(TOKEN_URL, payload)
+
+        self.assertNotIn('token', res.data)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
